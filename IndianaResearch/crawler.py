@@ -1,14 +1,15 @@
 import json
 import time
+import pandas as pd
 from tqdm import tqdm
-import undetected_chromedriver as uc
-
+from seleniumbase import SB
 
 # Please update the project names of FlowGPT here.
 # Complete name list is accessible at
 # https://github.com/idllresearch/malicious-gpt/blob/main/malicious_LLM_name_list
-flowgpt_malla_bot_names = ["agpt-v7-jailbreak", "kawaii-girl"]
+df = pd.read_csv("malicious_LLM_applications_on_FlowGPT.csv")
 
+flowgpt_malla_bot_names = df['name'].tolist()
 
 # Visualize sleep bar
 def sleepBar(seconds):
@@ -16,34 +17,29 @@ def sleepBar(seconds):
         time.sleep(1)
 
 
-# Initialize browser
-def initUndetectedBrowser():
-    return uc.Chrome()
-
-
 # Sign in FlowGPT with in 60 second (In this task, it is not necessary to sign in.)
-def signin():
-    bot = initUndetectedBrowser()
-    bot.get("https://flowgpt.com/")
+def signin(sb):
+    sb.uc_open_with_reconnect("https://flowgpt.com/")
     sleepBar(60)
-    return bot
+    return sb
 
 
-def dataCollecting(bot, names, outputfile):
+def dataCollecting(sb, names, outputfile):
     for name in names:
-        bot.get("https://flowgpt.com/p/{}".format(name))
+        sb.get("https://flowgpt.com/p/{}".format(name))
         sleepBar(10)
 
-        targets = bot.find_elements('xpath', '//p[@class="overflow-hidden text-2sm font-normal text-fgMain-0"]')
+        targets = sb.find_elements('xpath', '//p[@class="overflow-hidden text-2sm font-normal text-fgMain-0"]')
         reviews = [target.text for target in targets]
         outputfile.write(json.dumps({"bot_name": name, "reviews": reviews}) + "\n")
         sleepBar(1)
 
 
 def main():
-    browser = signin()
-    with open("./flowgpt-reviews.json", "w", encoding="utf8") as wf:
-        dataCollecting(browser, flowgpt_malla_bot_names, wf)
+    with SB(uc=True) as sb:
+        browser = signin(sb)
+        with open("./flowgpt-reviews.json", "w", encoding="utf8") as wf:
+            dataCollecting(browser, flowgpt_malla_bot_names, wf)
 
 
 if __name__ == '__main__':
